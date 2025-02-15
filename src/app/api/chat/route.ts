@@ -1,8 +1,12 @@
 import { OpenAI } from 'openai';
 import { NextResponse } from 'next/server';
 import { validateInput, moderateContent, sanitizeInput, checkRateLimit } from '@/utils/security';
-import { headers } from 'next/headers';
 import { OpenAISettings } from '@/components/OpenAISettings';
+
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -26,7 +30,7 @@ export async function POST(req: Request) {
     // Validate and sanitize all inputs
     const validationResults = [
       validateInput(systemPrompt),
-      ...messages.map((msg: any) => validateInput(msg.content))
+      ...messages.map((msg: ChatMessage) => validateInput(msg.content))
     ];
 
     const invalidInput = validationResults.find(result => !result.isValid);
@@ -40,7 +44,7 @@ export async function POST(req: Request) {
     // Content moderation for all inputs
     const moderationResults = [
       moderateContent(systemPrompt),
-      ...messages.map((msg: any) => moderateContent(msg.content))
+      ...messages.map((msg: ChatMessage) => moderateContent(msg.content))
     ];
 
     const inappropriateContent = moderationResults.find(result => !result.isValid);
@@ -53,7 +57,7 @@ export async function POST(req: Request) {
 
     // Sanitize all inputs
     const sanitizedSystemPrompt = sanitizeInput(systemPrompt);
-    const sanitizedMessages = messages.map((msg: any) => ({
+    const sanitizedMessages = messages.map((msg: ChatMessage) => ({
       ...msg,
       content: sanitizeInput(msg.content)
     }));
